@@ -1,0 +1,15 @@
+{
+  "_modification_notice": "Modified from openai/math adc7f1241b42e322a6451854ab7e4b4c146bf78a, lean/ComparatorChallenges/MatrixMultiplication.json, by Jeroen Zuiddam, 2026: module names and theorem selection changed for the all-fields theorem; this informational key was added. The checking fields are otherwise as upstream.",
+  "challenge_module": "ComparatorChallenges.MatrixMultiplicationAllFields",
+  "solution_module": "OAI.LinearAlgebra.MatrixMultiplication.AllFields.Main",
+  "theorem_names": [
+    "OAI.MatrixMultiplication.omega_le_nine_quarters_all_fields"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ],
+  "enable_nanoda": false
+}

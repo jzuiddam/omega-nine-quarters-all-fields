@@ -1,0 +1,640 @@
+diff --git a/FixedPointTheorems/apply_cubical_sperner.lean b/FixedPointTheorems/apply_cubical_sperner.lean
+index ffbbbcd..5737a7c 100644
+--- a/FixedPointTheorems/apply_cubical_sperner.lean
++++ b/FixedPointTheorems/apply_cubical_sperner.lean
+@@ -1,17 +1,17 @@
+-
+-
+-import Mathlib.Analysis.Convex.Intrinsic
+-import Mathlib.Topology.Defs.Basic
++import Mathlib
+ import FixedPointTheorems.cubical_sperner
+ 
+-open Classical
++/-!
++# Fixed points in the unit cube
+ 
+-/-
+-shows the fixed-point theorem for the unit cube
+-by applying the cubical sperner's lemma
++Reduced labels encode coordinatewise displacement of a continuous cube map.
++Cubical Sperner simplices on finer grids yield approximate fixed points, and
++compactness of the cube supplies a genuine fixed point.
+ -/
+ 
+ 
++open Classical
++
+ variable {n : ℕ}
+ 
+ def unit_cube := { v : Fin n → ℝ | 0 ≤ v ∧ v ≤ 1 }
+@@ -131,7 +131,7 @@ lemma reduced_label_props_3 (f : @unit_cube n → @unit_cube n) (x : @unit_cube
+ noncomputable def discrete_map (p : ℕ ) (v : Fin n → Fin (p+1)) : @unit_cube n :=
+   ⟨ fun i ↦ ((v i).1 : ℝ ) / p , by {
+     unfold unit_cube
+-    simp only [Set.mem_setOf_eq]
++    simp only [Set.mem_ofPred_eq]
+     rw [Pi.le_def, Pi.le_def, ←forall_and]
+     intro i
+     simp only [Pi.zero_apply, Pi.one_apply]
+@@ -228,7 +228,6 @@ lemma nearby_points (f : @unit_cube n → @unit_cube n) (p0:ℕ):
+   exact ⟨h5 i0 ik k, h5 ik i0 k⟩
+ }
+ 
+-
+ theorem fixed_point_unit_cube (f : C(@unit_cube n, @unit_cube n)) : ∃ x, f x = x := by {
+   obtain ⟨x0s, hx0⟩ := axiomOfChoice (nearby_points f)
+   have hc1 : ∃ xx : @unit_cube n, ∃ (φ:ℕ → ℕ ), StrictMono φ ∧
+@@ -281,7 +280,6 @@ theorem fixed_point_unit_cube (f : C(@unit_cube n, @unit_cube n)) : ∃ x, f x =
+   apply le_antisymm (h4 k) (h3 k)
+ }
+ 
+-/-- The cubical fixed-point theorem stated with mathlib's `Function.IsFixedPt` vocabulary. -/
+ theorem fixed_point_unit_cube_isFixedPt (f : C(@unit_cube n, @unit_cube n)) :
+     ∃ x, Function.IsFixedPt f x := by
+-  simpa [Function.IsFixedPt] using fixed_point_unit_cube f
++  simpa [Function.IsFixedPt] using! fixed_point_unit_cube f
+diff --git a/FixedPointTheorems/brouwer.lean b/FixedPointTheorems/brouwer.lean
+index 7384d5b..23eaf4b 100644
+--- a/FixedPointTheorems/brouwer.lean
++++ b/FixedPointTheorems/brouwer.lean
+@@ -1,16 +1,13 @@
+-
+-
++import Mathlib
+ import FixedPointTheorems.apply_cubical_sperner
+ import FixedPointTheorems.convex_homeos
+-import Mathlib.Dynamics.FixedPoints.Basic
+-
+-
+ 
+-/- Brouwer fixed-point theorem:
+-Every continuous function mapping a nonempty compact convex set to itself has a fixed point
+-(the set should be a subset of a finite dimensional vector space).
++/-!
++# Brouwer's fixed-point theorem
+ 
+-https://en.wikipedia.org/wiki/Brouwer_fixed-point_theorem
++The unit-cube fixed-point theorem is transported along a homeomorphism of a
++nonempty compact convex set. The resulting theorem is also expressed using
++`Function.IsFixedPt` and the set of fixed points.
+ -/
+ 
+ 
+@@ -27,15 +24,13 @@ theorem brouwer_fixed_point {V : Type*}
+   rwa [e.symm_apply_apply] at h1
+ }
+ 
+-/-- Brouwer's fixed-point theorem stated with mathlib's `Function.IsFixedPt` vocabulary. -/
+ theorem brouwer_fixed_point_isFixedPt {V : Type*}
+     [NormedAddCommGroup V] [NormedSpace ℝ V] [FiniteDimensional ℝ V]
+     (s : Set V) (hcvx : Convex ℝ s) (hcmpct : IsCompact s) (hne : Set.Nonempty s)
+     (f : C(s, s)) :
+     ∃ x, Function.IsFixedPt f x := by
+-  simpa [Function.IsFixedPt] using brouwer_fixed_point s hcvx hcmpct hne f
++  simpa [Function.IsFixedPt] using! brouwer_fixed_point s hcvx hcmpct hne f
+ 
+-/-- The fixed-point set of a continuous self-map on a Brouwer domain is nonempty. -/
+ theorem brouwer_fixedPoints_nonempty {V : Type*}
+     [NormedAddCommGroup V] [NormedSpace ℝ V] [FiniteDimensional ℝ V]
+     (s : Set V) (hcvx : Convex ℝ s) (hcmpct : IsCompact s) (hne : Set.Nonempty s)
+diff --git a/FixedPointTheorems/convex_homeos.lean b/FixedPointTheorems/convex_homeos.lean
+index 944544a..947627c 100644
+--- a/FixedPointTheorems/convex_homeos.lean
++++ b/FixedPointTheorems/convex_homeos.lean
+@@ -1,10 +1,11 @@
++import Mathlib
+ 
+-import Mathlib.Analysis.Convex.Intrinsic
+-import Mathlib.Analysis.Convex.GaugeRescale
++/-!
++# Homeomorphisms of compact convex sets
+ 
+-
+-/-
+-some helper lemmas involving homeomorphisms.
++Compact convex sets are reduced to unit balls in their affine spans and then to
++finite-dimensional cubes. These homeomorphisms transfer the cubical fixed-point
++theorem to arbitrary nonempty compact convex domains.
+ -/
+ 
+ 
+@@ -24,7 +25,6 @@ lemma homeo_unit_ball {V : Type*}
+   exact Nonempty.intro e2
+ }
+ 
+-
+ theorem homeo_of_finrank_eq {V W : Type*}
+     [NormedAddCommGroup V] [NormedSpace ℝ V] [FiniteDimensional ℝ V]
+     [NormedAddCommGroup W] [NormedSpace ℝ W] [FiniteDimensional ℝ W]
+@@ -58,7 +58,6 @@ theorem homeo_of_finrank_eq {V W : Type*}
+   exact e2.symm.trans e1
+ }
+ 
+-
+ lemma unit_cube_homeo_unit_ball {n}
+     : Nonempty (Set.Icc (0 : Fin n → ℝ) 1 ≃ₜ Metric.closedBall (0 : Fin n → ℝ) 1 ) := by
+   apply homeo_unit_ball _ (convex_Icc 0 1) isCompact_Icc
+@@ -72,7 +71,7 @@ lemma homeo_unit_cube_of_convex_compact {V : Type*}
+     [NormedAddCommGroup V] [NormedSpace ℝ V] [FiniteDimensional ℝ V]
+     (s: Set V) (hcvx : Convex ℝ s) (hcmpct : IsCompact s) (hne : s.Nonempty)
+     : ∃ k, Nonempty (s ≃ₜ Set.Icc (0 : Fin k → ℝ) 1) := by {
+-  haveI := hne.coe_sort
++  have := hne.coe_sort
+   let W := affineSpan ℝ s
+   obtain ⟨ps, hps⟩ := hne
+   let pss : W := ⟨ps, mem_affineSpan ℝ hps⟩
+diff --git a/FixedPointTheorems/cubical_sperner.lean b/FixedPointTheorems/cubical_sperner.lean
+index 0380c46..9bc9535 100644
+--- a/FixedPointTheorems/cubical_sperner.lean
++++ b/FixedPointTheorems/cubical_sperner.lean
+@@ -1,19 +1,25 @@
+-
++import Mathlib
+ import FixedPointTheorems.cubical_sperner_prep
+ 
++/-!
++# The cubical Sperner lemma
+ 
+-open Classical
++Boundary incidence counts give an odd number of completely labelled simplices.
++The induction restricts a labelled cube to its boundary face; the resulting
++existence theorem supplies the simplices used in the fixed-point argument.
++-/
+ 
+ 
++open Classical
+ 
+ section completeness
+ 
+ lemma complete_simplex_iff {SC} m I(hs : simplex SC m I) :
+-    complete_simplex SC m I ↔ ∀ c, c≤m → ∃ i, SC.RL (I i) = c := by {
++    complete_simplex SC m I ↔ ∀ c, c ≤ m → ∃ i, SC.RL (I i) = c := by {
+   apply Iff.intro
+   {
+     intro h1 c hc
+-    rwa [← Set.mem_range, h1.2, Set.mem_setOf_eq]
++    rwa [← Set.mem_range, h1.2, Set.mem_ofPred_eq]
+   }
+   {
+     intro c1
+@@ -33,7 +39,7 @@ lemma complete_simplex_iff {SC} m I(hs : simplex SC m I) :
+       Set.mem_range] at h1
+     obtain ⟨ i, hi⟩ := h1
+     use i
+-    simp only [Set.coe_toFinset, Set.mem_setOf_eq]
++    simp only [Set.coe_toFinset, Set.mem_ofPred_eq]
+     apply And.intro (Fin.is_le i)
+     unfold f1
+     rw [← hi]
+@@ -41,7 +47,6 @@ lemma complete_simplex_iff {SC} m I(hs : simplex SC m I) :
+   }
+ }
+ 
+-
+ lemma rl_inj_of_complete {SC} m I (hcs : complete_simplex SC m I):
+     ∀ i1 i2, SC.RL (I i1) = SC.RL (I i2) → i1 = i2 := by {
+   let f1 : Fin (m+1) → Fin (m+1) := fun j ↦ Fin.ofNat _ (SC.RL (I j))
+@@ -63,7 +68,6 @@ lemma rl_inj_of_complete {SC} m I (hcs : complete_simplex SC m I):
+   exact Fin.cast_val_eq_self c
+ }
+ 
+-
+ lemma char_complete_face {SC n1 hn1} I J (hs : simplex SC SC.n J) :
+     complete_simplex SC n1 I ∧ is_face SC I J
+     ↔ ∃ i, I = @delete_vertex SC n1 hn1 i J
+@@ -107,12 +111,11 @@ lemma char_complete_face {SC n1 hn1} I J (hs : simplex SC SC.n J) :
+   }
+ }
+ 
+-
+ lemma complete_child_uniq {SC n1} {hn1 : n1 + 1 = SC.n} J (hcs : complete_simplex SC SC.n J) :
+     ∃! (I : Fin (n1+1) → SC.G), complete_simplex SC n1 I ∧ is_face SC I J := by {
+   have h4 : ∃ i, SC.RL (J i) = SC.n := by {
+     rw [← Set.mem_range, hcs.2]
+-    simp only [Set.mem_setOf_eq, le_refl]
++    simp only [Set.mem_ofPred_eq, le_refl]
+   }
+   obtain ⟨ i, hi⟩ := h4
+   let I := @delete_vertex SC n1 hn1 i J
+@@ -168,7 +171,6 @@ lemma complete_child_uniq {SC n1} {hn1 : n1 + 1 = SC.n} J (hcs : complete_simple
+   exact (Eq.symm hi)
+ }
+ 
+-
+ lemma incomplete_childs {SC n1} {hn1 : n1 + 1 = SC.n} J (hs : simplex SC SC.n J)
+     (hnc : ¬ complete_simplex SC SC.n J):
+     Even (Finset.card { I : Fin (n1 + 1) → SC.G | complete_simplex SC n1 I ∧ is_face SC I J}) := by {
+@@ -282,7 +284,6 @@ lemma incomplete_childs {SC n1} {hn1 : n1 + 1 = SC.n} J (hs : simplex SC SC.n J)
+   }
+ }
+ 
+-
+ lemma complete_boundary_face_last {SC n1} {hn1 : n1 + 1 = SC.n} (I : Fin (n1 + 1) → SC.G)
+     (hcbf : complete_boundary_face SC I) :
+     ∀ i, ∀ j, j.1 + 1 = SC.n →  (I i j).1 = SC.p := by {
+@@ -293,7 +294,7 @@ lemma complete_boundary_face_last {SC n1} {hn1 : n1 + 1 = SC.n} (I : Fin (n1 + 1
+   have h4 : ∀ n2, n2 ≤ n1 → ∃ i, SC.RL (I i) = n2 := by {
+     intro n2 hn2
+     rw [← Set.mem_range, hcbf.2.2]
+-    simp only [Set.mem_setOf_eq, hn2]
++    simp only [Set.mem_ofPred_eq, hn2]
+   }
+   have h6 (j2 : Fin SC.n) : j2.1 ≤ n1 := by omega
+   cases h3
+@@ -328,8 +329,6 @@ lemma complete_boundary_face_last {SC n1} {hn1 : n1 + 1 = SC.n} (I : Fin (n1 + 1
+ 
+ end completeness
+ 
+-
+-
+ section handshake
+ 
+ variable {A B : Type*}
+@@ -385,7 +384,7 @@ lemma handshake_1 (r : A → B → Prop)
+     {
+       intro p2
+       have p3 := h3 a (h6 a p1)
+-      simp only [Set.mem_setOf_eq] at p3
++      simp only [Set.mem_ofPred_eq] at p3
+       cases p3
+       rename_i p4
+       exact p4
+@@ -415,7 +414,7 @@ lemma handshake_1 (r : A → B → Prop)
+       intro p2
+       have p5 : Finset.Nonempty {a | r2 a b} := by {
+         have p3 : Odd (Finset.card { a | r2 a b}) := by {
+-          convert p2
++          convert! p2
+         }
+         apply Finset.card_ne_zero.mp
+         intro p4
+@@ -432,15 +431,13 @@ lemma handshake_1 (r : A → B → Prop)
+       revert p2
+       have p4 := h2 b p3 p1
+       simp only [imp_false, Nat.not_odd_iff_even]
+-      convert p4
++      convert! p4
+     }
+   }
+ }
+ 
+ end handshake
+ 
+-
+-
+ lemma odd_of_boundary_faces SC {n1} {hn1 : n1 + 1 = SC.n}:
+     Odd (Finset.card { I : Fin (n1 + 1) → SC.G | complete_boundary_face SC I})
+     → Odd (Finset.card { I | complete_simplex SC SC.n I}) := by {
+@@ -456,13 +453,11 @@ lemma odd_of_boundary_faces SC {n1} {hn1 : n1 + 1 = SC.n}:
+   exact fun _ _ h1 ↦ h1.2.1
+ }
+ 
+-
+ section induction_step
+ 
+ variable (SC : SpernerCube)
+ variable {n1 : ℕ}
+ 
+-
+ def child_map (v : Fin n1 → Fin (SC.p+1) ) : SC.G := fun i ↦
+   match n1 with
+   | 0 => Fin.last SC.p
+@@ -587,10 +582,8 @@ def child_cube {hn1 : n1 + 1 = SC.n}: SpernerCube where
+     exact hn1
+   }
+ 
+-
+ end induction_step
+ 
+-
+ lemma induction_start (SC : SpernerCube) (h0 : 0 = SC.n)
+     : Odd (Finset.card { I | complete_simplex SC SC.n I}) := by {
+   use 0
+@@ -625,7 +618,7 @@ lemma induction_start (SC : SpernerCube) (h0 : 0 = SC.n)
+   {
+     ext i
+     simp only [← h0]
+-    simp only [Set.mem_range, nonpos_iff_eq_zero, Set.setOf_eq_eq_singleton, Set.mem_singleton_iff]
++    simp only [Set.mem_range, nonpos_iff_eq_zero, Set.ofPred_eq_eq_singleton, Set.mem_singleton_iff]
+     have h3 : ∀ c, SC.RL (a c) = 0 := by {
+       intro c
+       have h2 := (SC.rl_proper (a c)).1
+@@ -727,6 +720,9 @@ theorem strong_cubical_sperner (k: ℕ ) : ∀ (SC : SpernerCube), k = SC.n →
+             rw [← hk1]
+             rfl
+           }
++          change (I (Fin.ofNat (k + 1) i) j).val ≤
++            (I (Fin.ofNat (k + 1) (i + 1)) j).val ∧
++            (I (Fin.last k) j).val ≤ (I 0 j).val + 1
+           rw [← h6, ← h6, ←h6, ← h6]
+           exact h4 (Fin.ofNat _ j.1)
+         }
+@@ -770,13 +766,16 @@ theorem strong_cubical_sperner (k: ℕ ) : ∀ (SC : SpernerCube), k = SC.n →
+       }
+       exact Eq.congr_right rfl
+     }
++    change ∀ I, complete_boundary_face SC1 (f2 I) ↔ complete_simplex SC2 k I at hcomp
++    change ({I : Fin (k + 1) → SC2.G | complete_simplex SC2 k I} : Finset _).card =
++      ({I : Fin (k + 1) → SC1.G | complete_boundary_face SC1 I} : Finset _).card
+     apply Finset.card_nbij f2
+     {
+       intro I hI
+-      have hI' : complete_simplex SC2 SC2.n I :=
+-        (Finset.mem_filter.mp (Finset.mem_coe.mp hI)).2
+-      exact Finset.mem_coe.mpr
+-        (Finset.mem_filter.mpr ⟨Finset.mem_univ _, (hcomp I).mpr hI'⟩)
++      have hI' : complete_simplex SC2 k I := by
++        simpa only [Finset.mem_coe, Finset.mem_filter, Finset.mem_univ, true_and] using hI
++      simpa only [Finset.mem_coe, Finset.mem_filter, Finset.mem_univ, true_and]
++        using (hcomp I).mpr hI'
+     }
+     {
+       intro I1 h41 I2 h42 h5
+@@ -787,7 +786,7 @@ theorem strong_cubical_sperner (k: ℕ ) : ∀ (SC : SpernerCube), k = SC.n →
+     {
+       simp only [Finset.coe_filter, Finset.mem_univ, true_and]
+       intro J
+-      simp only [Set.mem_setOf_eq, Set.mem_image]
++      simp only [Set.mem_ofPred_eq, Set.mem_image]
+       intro h3
+       have h4 : ∃ I, f2 I = J := by {
+         suffices h6 : ∀ i, ∃ ii, f1 ii = J i by {
+@@ -804,8 +803,8 @@ theorem strong_cubical_sperner (k: ℕ ) : ∀ (SC : SpernerCube), k = SC.n →
+       obtain ⟨I, h4⟩ := h4
+       use I
+       simp only [h4, and_true]
+-      exact Finset.mem_coe.mpr (Finset.mem_filter.mpr
+-        ⟨Finset.mem_univ I, (hcomp I).mp (h4 ▸ h3)⟩)
++      simpa only [Finset.mem_coe, Finset.mem_filter, Finset.mem_univ, true_and]
++        using (hcomp I).mp (h4 ▸ h3)
+     }
+   }
+ 
+diff --git a/FixedPointTheorems/cubical_sperner_prep.lean b/FixedPointTheorems/cubical_sperner_prep.lean
+index 243b3db..4edc1b7 100644
+--- a/FixedPointTheorems/cubical_sperner_prep.lean
++++ b/FixedPointTheorems/cubical_sperner_prep.lean
+@@ -1,15 +1,15 @@
++import Mathlib
+ 
+-import Mathlib.Combinatorics.Enumerative.DoubleCounting
+-import Mathlib.Algebra.BigOperators.Ring.Nat
+-import Mathlib.Tactic
++/-!
++# Cubical simplices and boundary incidence
+ 
+-open Classical
++The grid simplices of a labelled cube are classified by their boundary coordinates.
++Coordinate-change counts order their vertices and determine the number of parent simplices,
++providing the incidence identities used in the cubical Sperner argument.
++-/
+ 
+ 
+-/-
+-The Cubical Sperner's Lemma.
+-We mostly follow Kuhn 1960 "Some Combinatorial Lemmas in Topology"
+--/
++open Classical
+ 
+ structure SpernerCube where
+   n : ℕ
+@@ -32,7 +32,6 @@ variable (SC : SpernerCube)
+ variable {n1 : ℕ}
+ variable {hn1 : n1 + 1 = SC.n}
+ 
+-
+ def simplex (m:ℕ ) (I : Fin (m+1)→ SC.G) := Function.Injective I
+     ∧ ∀ i < m, ∀ j : Fin SC.n, (I (Fin.ofNat _ i) j).1 ≤ (I (Fin.ofNat _ (i+1)) j).1
+     ∧ (I (Fin.last m) j).1 ≤ (I 0 j).1 + 1
+@@ -56,7 +55,6 @@ def case_C (I : Fin (n1 +1) → SC.G) :=
+ 
+ def case_D (I : Fin (n1 +1) → SC.G) := ∀ j, ∀ q, ∃ k,I k j ≠ q
+ 
+-
+ lemma one_of_ABCD (I : Fin (n1 +1) → SC.G) :
+     case_A SC I ∨ case_B SC I ∨ case_C SC I ∨ case_D SC I := by {
+   by_cases h1 : case_D SC I
+@@ -83,10 +81,8 @@ lemma one_of_ABCD (I : Fin (n1 +1) → SC.G) :
+   use j, q
+ }
+ 
+-
+ section simplex_properties
+ 
+-
+ lemma monotone_1_of_simplex {m:ℕ } (I : Fin (m+1)→ SC.G) (hs : simplex SC m I) (i1 i2 : Fin (m+1))
+     (h1 : i1 ≤ i2) : ∀ j, I i1 j ≤ I i2 j := by {
+   intro j
+@@ -98,7 +94,7 @@ lemma monotone_1_of_simplex {m:ℕ } (I : Fin (m+1)→ SC.G) (hs : simplex SC m
+   intro i1
+   have h3 := (hs.2 i1.1 i1.2 j).1
+   simp only [Fin.val_fin_le] at h3
+-  convert h3 <;> ext <;> simp [Fin.ofNat_eq_cast, Nat.mod_eq_of_lt]
++  convert! h3 <;> ext <;> simp [Fin.ofNat_eq_cast, Nat.mod_eq_of_lt]
+ }
+ 
+ lemma monotone_2_of_simplex {m:ℕ } (I : Fin (m+1)→ SC.G) (hs : simplex SC m I) (i1 i2 : Fin (m+1)) :
+@@ -141,7 +137,6 @@ lemma le_add_one_of_simplex {m: ℕ} I (hs : simplex SC m I) (i1 i2 : Fin (m+1))
+ 
+ end simplex_properties
+ 
+-
+ lemma p_ne_zero_of_cube {hn1 : n1 + 1 = SC.n}: Fin.last SC.p ≠ 0 := by {
+   simp only [ne_eq, Fin.last_eq_zero_iff]
+   intro h1
+@@ -156,10 +151,8 @@ lemma p_ne_zero_of_cube {hn1 : n1 + 1 = SC.n}: Fin.last SC.p ≠ 0 := by {
+   exact h2.1 h4 (h2.2 h4)
+ }
+ 
+-
+ section simplex_child
+ 
+-
+ def insert_index (j : Fin (SC.n+1)) (a: Fin (n1 +1 )) : Fin (SC.n+1) :=
+ { val := if a.val < j.val then a.val else a.val+1,
+   isLt := by {
+@@ -271,7 +264,6 @@ lemma insert_index_inj j : Function.Injective (@insert_index SC n1 hn1 j) := by
+   apply insert_index_strict_mono
+ }
+ 
+-
+ lemma delete_vertex_inj J {hs : simplex SC SC.n J} i1 i2
+     (h1 : @delete_vertex SC n1 hn1 i1 J = @delete_vertex SC n1 hn1 i2 J ) : i1 = i2 := by {
+   by_contra h2
+@@ -441,7 +433,6 @@ lemma child_simplex_char (I : Fin (n1 +1) → SC.G) J {hs : simplex SC SC.n J}
+ 
+ end simplex_child
+ 
+-
+ section cases_ABCD
+ 
+ lemma insert_vertex I (v : SC.G) j :
+@@ -702,7 +693,7 @@ lemma parent_simplex_case_D I (hs : simplex SC n1 I) J j i
+     }
+     by_cases h8 : i2 = j.1
+     {
+-      convert h5.2
++      convert! h5.2
+       simp only [h8, Fin.cast_val_eq_self]
+       have h11 : j ≠ Fin.last SC.n := by {
+         suffices h12 : j.1 ≠ SC.n by exact Ne.symm (Fin.ne_of_val_ne (Ne.symm h12))
+@@ -717,7 +708,7 @@ lemma parent_simplex_case_D I (hs : simplex SC n1 I) J j i
+     {
+       rw [←h9] at h6
+       simp only [Nat.add_right_cancel_iff] at h6
+-      convert h5.1
++      convert! h5.1
+       rw [←h6]
+       simp only [Fin.cast_val_eq_self]
+       rw [h9]
+@@ -786,8 +777,7 @@ lemma parent_simplex_case_D I (hs : simplex SC n1 I) J j i
+   }
+ }
+ 
+-
+-def coord_change_count (v1 v2 : SC.G) := Finset.card {i | v1 i ≠ v2 i}
++noncomputable def coord_change_count (v1 v2 : SC.G) := Finset.card {i | v1 i ≠ v2 i}
+ 
+ lemma ccc_add {m} I (hs : simplex SC m I) (i1 i2 i3) (h1 : i1 ≤ i2 ∧ i2 ≤ i3) :
+     coord_change_count SC (I i1) (I i3) =
+@@ -842,7 +832,7 @@ lemma ccc_pos {m} I (hs : simplex SC m I) i1 i2 (h1 : i1 ≠ i2)
+   apply h2
+ }
+ 
+-def ccc_fun {m} (I : Fin (m+1)→ SC.G) (i : Fin (m+1)) : Fin (SC.n + 1 )
++noncomputable def ccc_fun {m} (I : Fin (m+1)→ SC.G) (i : Fin (m+1)) : Fin (SC.n + 1 )
+     := ⟨ coord_change_count SC (I 0) (I i), by {
+       refine Nat.lt_succ_of_le ?_
+       exact card_finset_fin_le {i_1 | I 0 i_1 ≠ I i i_1}
+@@ -865,18 +855,15 @@ lemma ccc_fun_is_insert_index I (hs : simplex SC n1 I) :
+   apply ccc_fun_strict_mono SC I hs
+ }
+ 
+-
+-
+ lemma ccc_fun_case_D_iff {m} I (hs : simplex SC m I) :
+     case_D SC I ↔ ccc_fun SC I (Fin.last m) = Fin.last SC.n := by {
+   have h1 : (ccc_fun SC I (Fin.last m) = Fin.last SC.n) ↔ ∀ k, I 0 k ≠ I (Fin.last m) k  := by {
+-    unfold ccc_fun coord_change_count
+-    rw [Fin.mk.inj_iff]
+-    have h3 : SC.n = Fintype.card (Fin SC.n) := by {exact Eq.symm (Fintype.card_fin SC.n)}
+-    simp only [ne_eq, Fin.val_last]
+-    nth_rewrite 7 [h3]
+-    rw [Finset.card_eq_iff_eq_univ, Finset.eq_univ_iff_forall]
+-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
++    rw [Fin.ext_iff]
++    change Finset.card {k : Fin SC.n | I 0 k ≠ I (Fin.last m) k} = SC.n ↔ _
++    have hcard := Finset.card_eq_iff_eq_univ
++      {k : Fin SC.n | I 0 k ≠ I (Fin.last m) k}
++    simpa only [Fintype.card_fin, Finset.eq_univ_iff_forall,
++      Finset.mem_filter, Finset.mem_univ, true_and] using hcard
+   }
+   apply Iff.trans _ h1.symm
+   unfold case_D
+@@ -1068,7 +1055,6 @@ lemma same_delete_index_eq_iff J1 J2 j
+   exact congrFun h1 i1
+ }
+ 
+-
+ lemma case_D_parent_count {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) (h1 : case_D SC I )
+     : Finset.card { J : Fin (SC.n + 1) → SC.G | is_face SC I J} = 2 := by {
+   obtain ⟨ j1, hj1 ⟩ := @ccc_fun_is_insert_index SC n1 hn1 I hs
+@@ -1115,7 +1101,7 @@ lemma case_D_parent_count {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) (h1 : c
+   have h4 : ∃ k1, ∃ k2, k1 ≠ k2 ∧ {k | I i1 k ≠ I (i1 +1) k} = {k1, k2} := by {
+     unfold coord_change_count at h3
+     rw [Finset.card_eq_two] at h3
+-    convert h3
++    convert! h3
+     simp only [ne_eq]
+     rw [←Finset.coe_eq_pair]
+     simp only [Finset.coe_filter, Finset.mem_univ, true_and]
+@@ -1304,7 +1290,6 @@ lemma case_D_parent_count {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) (h1 : c
+   }
+ }
+ 
+-
+ lemma unique_const_ABC {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) k1 q1
+     (h1 : ∀ i, I i k1 = q1): ∀ k2, k1 ≠ k2 → I 0 k2 ≠ I (Fin.last n1) k2 := by {
+   intro k2 h3 h2
+@@ -1336,7 +1321,6 @@ lemma unique_const_ABC {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) k1 q1
+   simp only [Nat.not_ofNat_le_one] at h7
+ }
+ 
+-
+ lemma case_AC_ex_unique I (hs : simplex SC n1 I) k1 q
+     (hABC : ∀ i, I i k1 = q) (hAC : q ≠ Fin.last SC.p)
+     : ∃! J, I = @delete_vertex SC n1 hn1 (Fin.last SC.n) J ∧ is_face SC I J := by {
+@@ -1422,7 +1406,6 @@ lemma case_B_not_last I (h1 : case_B SC I) J
+   exact lt_add_one SC.p
+ }
+ 
+-
+ lemma case_BC_ex_unique I (hs : simplex SC n1 I) k1 q
+     (hABC : ∀ i, I i k1 = q) (hBC : q ≠ 0)
+     : ∃! J, I = @delete_vertex SC n1 hn1 0 J ∧ is_face SC I J := by {
+@@ -1503,8 +1486,6 @@ lemma case_A_not_zero I (h1 : case_A SC I) J
+   rfl
+ }
+ 
+-
+-
+ lemma case_ABC_count_disj {hn1 : n1 + 1 = SC.n} I k1 q
+     (hABC : ∀ i, I i k1 = q) : Finset.card { J | is_face SC I J}
+     = Finset.card {J | I = @delete_vertex SC n1 hn1 0 J ∧ is_face SC I J}
+@@ -1546,7 +1527,6 @@ lemma case_ABC_count_disj {hn1 : n1 + 1 = SC.n} I k1 q
+   rw [←h2.1,←h3.1]
+ }
+ 
+-
+ lemma case_C_parent_count {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) (h1 : case_C SC I )
+     : Finset.card { J : Fin (SC.n + 1) → SC.G | is_face SC I J} = 2 := by {
+   obtain ⟨k1,q, h1⟩  := h1
+@@ -1587,7 +1567,6 @@ lemma case_A_parent_count {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) (h2 : c
+ 
+ end cases_ABCD
+ 
+--- used in other file
+ lemma boundary_is_A_or_B {hn1 : n1 + 1 = SC.n} I (hbf : @is_boundary_face SC n1 I)
+     : case_A SC I ∨ case_B SC I := by {
+   have hs : simplex SC n1 I := by {
+@@ -1607,16 +1586,13 @@ lemma boundary_is_A_or_B {hn1 : n1 + 1 = SC.n} I (hbf : @is_boundary_face SC n1
+   simp only [OfNat.ofNat_ne_one] at hbf
+ }
+ 
+--- used in other file
+ lemma case_B_boundary {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I)
+     (h1 : case_B SC I) : is_boundary_face SC I :=
+   (Fintype.existsUnique_iff_card_one _).mpr (@case_B_parent_count SC n1 hn1 I hs h1)
+ 
+-
+--- used in other file
+ lemma parent_count {hn1 : n1 + 1 = SC.n} I (hs : simplex SC n1 I) :
+     Finset.card { J : Fin (SC.n + 1) → SC.G | is_face SC I J} ∈ {c | c = 1 ∨ c = 2} := by {
+-  simp only [Set.mem_setOf_eq]
++  simp only [Set.mem_ofPred_eq]
+   have h1 := one_of_ABCD SC I
+   rw [←or_assoc] at h1
+   cases' h1 with h1 h1
+diff --git a/lakefile.toml b/lakefile.toml
+index 936ece4..186ed66 100644
+--- a/lakefile.toml
++++ b/lakefile.toml
+@@ -10,8 +10,8 @@ autoImplicit = false
+ 
+ [[require]]
+ name = "mathlib"
+-scope = "leanprover-community"
+-rev = "v4.32.0"
++git = "https://github.com/leanprover-community/mathlib4.git"
++rev = "d13f23b723b8a846827a245b89c10fc7d3f11612"
+ 
+ [[lean_lib]]
+ name = "FixedPointTheorems"
+diff --git a/lean-toolchain b/lean-toolchain
+index 94b9f49..ba8ebf2 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.32.0
++leanprover/lean4:v4.34.1

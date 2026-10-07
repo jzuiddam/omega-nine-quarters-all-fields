@@ -1,0 +1,49 @@
+# CI: build the proof from a clean checkout and check its axioms (the comparator is not run here).
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Cache toolchain and .lake
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan
+            .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
+
+      - name: lake update (applies the fixed-point-theorems patch; manifest must not change)
+        run: |
+          lake update
+          git diff --exit-code lake-manifest.json
+
+      - name: lake exe cache get
+        run: lake exe cache get
+
+      - name: lake build
+        run: lake build
+
+      - name: Build the comparator challenge
+        run: lake build ComparatorChallenges.MatrixMultiplicationAllFields
+
+      - name: Axiom checks
+        run: |
+          set -o pipefail
+          lake env lean Checks/Axioms.lean 2>&1 | tee axioms.log
+          python3 .github/check_axioms.py axioms.log Checks/Axioms.lean

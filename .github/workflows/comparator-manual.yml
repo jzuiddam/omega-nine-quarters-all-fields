@@ -1,0 +1,45 @@
+# Manual and experimental: run leanprover/comparator on the challenge. landrun's Landlock sandbox
+# may not work on GitHub-hosted runners; a failure here is not by itself evidence against the proof.
+name: comparator (manual, experimental)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  comparator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build comparator, lean4export (v4.34.0 tags, Lean v4.34.1) and landrun
+        run: |
+          mkdir -p "$RUNNER_TEMP/tools"
+          for t in comparator lean4export; do
+            git clone --depth 1 --branch v4.34.0 "https://github.com/leanprover/$t.git" "$RUNNER_TEMP/tools/$t"
+            echo 'leanprover/lean4:v4.34.1' > "$RUNNER_TEMP/tools/$t/lean-toolchain"
+            (cd "$RUNNER_TEMP/tools/$t" && lake build)
+            echo "$RUNNER_TEMP/tools/$t/.lake/build/bin" >> "$GITHUB_PATH"
+          done
+          GOBIN="$RUNNER_TEMP/tools/bin" go install github.com/zouuup/landrun/cmd/landrun@latest
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+
+      - name: Build the project
+        run: |
+          lake update
+          git diff --exit-code lake-manifest.json
+          lake exe cache get
+          lake build
+
+      - name: Comparator
+        run: lake env comparator ComparatorChallenges/MatrixMultiplicationAllFields.json

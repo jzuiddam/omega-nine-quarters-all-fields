@@ -1,0 +1,20 @@
+# Lean and Lake build artifacts and local dependencies
+.lake/
+.lean/
+/build/
+*.olean
+*.ilean
+*.olean.server
+*.olean.private
+*.trace
+
+# Legacy Lean package dependencies
+/_target/
+/leanpkg.path
+
+# macOS metadata
+.DS_Store
+
+# Added by Jeroen Zuiddam, 2026 (the rules above are upstream's lean/.gitignore at openai/math
+# adc7f1241, verbatim): `.lake/` does not match a `.lake` symlink, e.g. to fast local storage.
+/.lake
